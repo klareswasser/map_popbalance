@@ -1,0 +1,19 @@
+# Data files
+*.parquet
+*.csv
+*.geojson
+!docs/*.geojson
+
+# Generated images / outputs
+*.png
+*.jpg
+cluster_map_tokyo.html
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

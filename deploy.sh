@@ -28,7 +28,8 @@ open "http://localhost:$PORT/"
 # ── 2. GitHub push ─────────────────────────────────────
 echo "\n🚀  GitHub へ push 中..."
 cd "$REPO_DIR"
-git add -A
+# docs/ と主要設定ファイルのみ対象（巨大なデータファイルを除外）
+git add docs/ .gitignore deploy.sh README.md 2>/dev/null || true
 if git diff --cached --quiet; then
   echo "   変更なし — push をスキップしました"
 else
