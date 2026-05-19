@@ -430,7 +430,6 @@ const LON_STEP = 22.5 / 3600;
 
 map.on('click', 'cluster-fill', (e) => {
   if (e.features.length > 0) {
-    pinned = true;
     const feature = e.features[0];
     // クリック座標からメッシュのSW角を再計算（タイルクリッピング問題を回避）
     const lat = e.lngLat.lat;
@@ -439,14 +438,18 @@ map.on('click', 'cluster-fill', (e) => {
     const swLon = Math.floor((lon - 100) / LON_STEP) * LON_STEP + 100;
     const neLat = swLat + LAT_STEP;
     const eLon = swLon + LON_STEP;
-    setHighlight({
+    const geometry = {
       type: 'Polygon',
       coordinates: [[[swLon, swLat], [eLon, swLat], [eLon, neLat], [swLon, neLat], [swLon, swLat]]],
-    });
-    // ポップアップをメッシュ上端中央に表示
+    };
+    // popup.addTo() は既存ポップアップが開いている場合 close イベントを発火する。
+    // close → clearHighlight() が呼ばれてしまうため、
+    // popup.addTo の後に setHighlight・pinned=true をセットする。
     popup.setLngLat([swLon + LON_STEP / 2, neLat])
          .setHTML(makePopupHTML(feature.properties))
          .addTo(map);
+    pinned = true;           // close イベントで false になった場合に再セット
+    setHighlight(geometry);  // close → clearHighlight() の後に呼ぶ
   }
 });
 
