@@ -424,18 +424,27 @@ map.on('mouseleave', 'cluster-fill', () => {
   map.getCanvas().style.cursor = '';
 });
 
+// 500mメッシュのグリッドステップ（PMTilesのクリッピングに依存しない再計算用）
+const LAT_STEP = 15 / 3600;
+const LON_STEP = 22.5 / 3600;
+
 map.on('click', 'cluster-fill', (e) => {
   if (e.features.length > 0) {
     pinned = true;
     const feature = e.features[0];
-    setHighlight(feature.geometry);
+    // クリック座標からメッシュのSW角を再計算（タイルクリッピング問題を回避）
+    const lat = e.lngLat.lat;
+    const lon = e.lngLat.lng;
+    const swLat = Math.floor(lat / LAT_STEP) * LAT_STEP;
+    const swLon = Math.floor((lon - 100) / LON_STEP) * LON_STEP + 100;
+    const neLat = swLat + LAT_STEP;
+    const eLon = swLon + LON_STEP;
+    setHighlight({
+      type: 'Polygon',
+      coordinates: [[[swLon, swLat], [eLon, swLat], [eLon, neLat], [swLon, neLat], [swLon, swLat]]],
+    });
     // ポップアップをメッシュ上端中央に表示
-    const coords = feature.geometry.coordinates[0];
-    const lats = coords.map(c => c[1]);
-    const lons = coords.map(c => c[0]);
-    const topLat = Math.max(...lats);
-    const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2;
-    popup.setLngLat([centerLon, topLat])
+    popup.setLngLat([swLon + LON_STEP / 2, neLat])
          .setHTML(makePopupHTML(feature.properties))
          .addTo(map);
   }
