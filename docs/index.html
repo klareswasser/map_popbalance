@@ -135,18 +135,6 @@
     }
     #info-body { font-size: 12px; color: rgba(60,60,67,0.65); line-height: 1.7; }
 
-    /* ── MapLibre control overrides ── */
-    .maplibregl-ctrl-group {
-      border-radius: 12px !important;
-      overflow: hidden !important;
-      border: 0.5px solid rgba(255,255,255,0.55) !important;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04) !important;
-      background: rgba(255,255,255,0.78) !important;
-      backdrop-filter: blur(24px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-    }
-    .maplibregl-ctrl-group button { background-color: transparent !important; }
-
     /* ── Mobile ── */
     @media (max-width: 640px) {
       #title-box { top: 12px; left: 12px; padding: 8px 12px; }
@@ -240,8 +228,6 @@ const map = new maplibregl.Map({
   zoom: 5,
   maxZoom: 14,
 });
-
-map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 
 map.on('load', () => {
   map.addSource('cluster', {
