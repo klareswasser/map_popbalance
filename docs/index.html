@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>国勢調査 メッシュ年齢分布クラスターマップ</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; }
+    #map { width: 100vw; height: 100vh; }
+
+    #legend {
+      position: absolute;
+      bottom: 40px;
+      left: 16px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+      min-width: 190px;
+    }
+    #legend h3 { font-size: 14px; margin-bottom: 8px; color: #333; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 3px;
+      margin-right: 8px; flex-shrink: 0;
+    }
+
+    #search-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255,255,252,0.95);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 12px 14px;
+      width: 270px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      z-index: 20;
+    }
+    #search-panel h2 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #444; }
+    #search-row { display: flex; gap: 6px; }
+    #address-input {
+      flex: 1; padding: 7px 10px; border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.18);
+      background: #fff; color: #1a1a1a;
+      font-size: 13px; outline: none;
+    }
+    #address-input:focus { border-color: #3b82f6; }
+    #search-btn {
+      padding: 7px 12px; border-radius: 6px; border: none;
+      background: #3b82f6; color: white; font-size: 13px;
+      cursor: pointer; font-weight: 600; white-space: nowrap;
+    }
+    #search-btn:hover { background: #2563eb; }
+    #result-box {
+      margin-top: 10px; padding: 10px 12px;
+      border-radius: 8px; font-size: 12px; display: none;
+    }
+    .result-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .result-detail { color: #555; line-height: 1.6; }
+
+    #info {
+      position: absolute;
+      bottom: 120px;
+      right: 16px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+      max-width: 280px;
+      display: none;
+    }
+    #info h3 { font-size: 14px; margin-bottom: 6px; }
+
+    @media (max-width: 600px) {
+      #search-panel {
+        top: auto; bottom: 0; right: 0; left: 0;
+        width: 100%; border-radius: 14px 14px 0 0;
+        padding: 12px 16px 20px;
+      }
+      #address-input { font-size: 16px; }
+      #search-btn { font-size: 16px; }
+    }
+
+    #title-box {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    #title-box h2 { font-size: 15px; color: #222; }
+    #title-box p { font-size: 11px; color: #666; margin-top: 3px; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="search-panel">
+  <h2>住所・地名で検索</h2>
+  <div id="search-row">
+    <input id="address-input" type="text" placeholder="例：渋谷区、札幌市北区" />
+    <button id="search-btn">検索</button>
+  </div>
+  <div id="result-box"></div>
+</div>
+
+<div id="info">
+  <h3 id="info-title"></h3>
+  <div id="info-body"></div>
+</div>
+
+<div id="title-box">
+  <h2>国勢調査 年齢分布クラスターマップ</h2>
+  <p>令和2年(2020) ・ 500mメッシュ ・ 全国</p>
+</div>
+
+<div id="legend">
+  <h3>クラスター凡例</h3>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>0: 学生街エリア <small>(20〜24歳)</small></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>1: 近年人気が高まる子育てエリア <small>(40〜44歳, 45〜49歳)</small></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div>2: 多世代が住まう都市型エリア <small>(45〜49歳, 30〜34歳, 35〜39歳)</small></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1565c0"></div>3: 高齢化が見え始めた郊外エリア <small>(45〜49歳, 70〜74歳)</small></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div>4: 準・限界住宅地エリア <small>(70〜74歳, 65〜69歳)</small></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#795548"></div>5: 限界住宅地エリア <small>(85〜89歳, 90〜94歳)</small></div>
+</div>
+
+<script>
+// PMTiles プロトコルの登録
+const protocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', protocol.tile);
+
+// PMTilesファイルのパス（絶対URLに変換）
+const PMTILES_URL = 'pmtiles://' + new URL('cluster.pmtiles', window.location.href).href;
+
+const CLUSTER_COLORS = [
+  '#ff9800', // 0
+  '#4caf50', // 1
+  '#bdbdbd', // 2
+  '#1565c0', // 3
+  '#f44336', // 4
+  '#795548', // 5
+];
+
+const colorExpr = [
+  'match', ['get', 'cluster_id'],
+  0, '#ff9800',
+  1, '#4caf50',
+  2, '#bdbdbd',
+  3, '#1565c0',
+  4, '#f44336',
+  5, '#795548',
+  '#aaaaaa'
+];
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: './pale.json',
+  center: [137.0, 37.0],
+  zoom: 5,
+  maxZoom: 14,
+});
+
+map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
+map.on('load', () => {
+  map.addSource('cluster', {
+    type: 'vector',
+    url: PMTILES_URL,
+    attribution: '© 総務省 令和2年国勢調査',
+  });
+
+  map.addLayer({
+    id: 'cluster-fill',
+    type: 'fill',
+    source: 'cluster',
+    'source-layer': 'cluster',
+    paint: {
+      'fill-color': colorExpr,
+      'fill-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        4, 0.5,
+        10, 0.7,
+        12, 0.85
+      ],
+    },
+  });
+
+  map.addLayer({
+    id: 'cluster-outline',
+    type: 'line',
+    source: 'cluster',
+    'source-layer': 'cluster',
+    minzoom: 9,
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': 0.3,
+      'line-opacity': 0.4,
+    },
+  });
+});
+
+// ホバー/クリックでポップアップ
+const clusterNames = {
+  0: "若年学生・単身層",     // 33.3歳
+  1: "若年ファミリー層",     // 38.6歳
+  2: "都市レジデンス・一般", // 42.0歳
+  3: "成熟市街地・一般",     // 46.6歳
+  4: "オールドタウン・郊外", // 53.4歳
+  5: "地方・高齢化進行",     // 67.2歳
+};
+
+map.on('mousemove', 'cluster-fill', (e) => {
+  map.getCanvas().style.cursor = 'pointer';
+  const props = e.features[0].properties;
+  const cid = props.cluster_id;
+  const infoEl = document.getElementById('info');
+  const titleEl = document.getElementById('info-title');
+  const bodyEl = document.getElementById('info-body');
+  infoEl.style.display = 'block';
+  titleEl.style.color = CLUSTER_COLORS[cid] || '#333';
+  titleEl.textContent = `Cluster ${cid}: ${clusterNames[cid] || ''}`;
+  let html = `人口: ${Number(props.pop_total).toLocaleString()} 人`;
+  if (props.gini != null) html += `<br>ジニ係数(0-64歳): ${Number(props.gini).toFixed(3)}`;
+  bodyEl.innerHTML = html;
+});
+
+map.on('mouseleave', 'cluster-fill', () => {
+  map.getCanvas().style.cursor = '';
+  document.getElementById('info').style.display = 'none';
+});
+
+// ── 住所検索 ──
+let searchMarker = null;
+
+async function searchAddress() {
+  const q = document.getElementById('address-input').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('search-btn');
+  btn.textContent = '…';
+  btn.disabled = true;
+
+  try {
+    const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.length) { showResult(null, '住所が見つかりませんでした'); return; }
+
+    const [lon, lat] = data[0].geometry.coordinates;
+    const displayName = data[0].properties.title;
+
+    if (searchMarker) searchMarker.remove();
+    searchMarker = new maplibregl.Marker({ color: '#3b82f6' })
+      .setLngLat([lon, lat])
+      .addTo(map);
+
+    map.flyTo({ center: [lon, lat], zoom: 12, duration: 800 });
+
+    map.once('moveend', () => {
+      map.once('idle', () => {
+        const pt = map.project([lon, lat]);
+        const features = map.queryRenderedFeatures(pt, { layers: ['cluster-fill'] });
+        if (features.length) {
+          const props = features[0].properties;
+          const cid = props.cluster_id;
+          const color = CLUSTER_COLORS[cid] || '#333';
+          const name = clusterNames[cid] || `Cluster ${cid}`;
+          let detail = `人口: ${Number(props.pop_total).toLocaleString()} 人`;
+          if (props.gini != null) detail += `<br>ジニ係数(0-64歳): ${Number(props.gini).toFixed(3)}`;
+          showResult(color, `Cluster ${cid}: ${name}`, detail);
+          if (searchMarker) { searchMarker.remove(); }
+          searchMarker = new maplibregl.Marker({ color })
+            .setLngLat([lon, lat])
+            .addTo(map);
+        } else {
+          showResult(null, displayName, 'この地点のメッシュデータがありません（海上・国外など）');
+        }
+      });
+    });
+  } catch (e) {
+    showResult(null, 'エラー', '検索に失敗しました');
+  } finally {
+    btn.textContent = '検索';
+    btn.disabled = false;
+  }
+}
+
+function showResult(color, name, detail) {
+  const box = document.getElementById('result-box');
+  box.style.display = 'block';
+  box.style.background = color ? `${color}18` : 'rgba(0,0,0,0.05)';
+  box.style.border = `1px solid ${color || '#ccc'}`;
+  box.innerHTML = `<div class="result-name" style="color:${color || '#333'}">${name}</div>`
+    + (detail ? `<div class="result-detail">${detail}</div>` : '');
+}
+
+document.getElementById('search-btn').addEventListener('click', searchAddress);
+document.getElementById('address-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') searchAddress();
+});
+</script>
+</body>
+</html>
