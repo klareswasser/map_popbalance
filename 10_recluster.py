@@ -172,52 +172,110 @@ df_merged.to_parquet(out_parquet, index=False)
 print(f"\nSaved: {out_parquet}")
 
 # ── 年齢分布図の描画 ──
-print("Plotting cluster age pyramids ...")
+print("Plotting cluster age pyramids (Apple Style Premium) ...")
 cluster_means = df_tgt.groupby("cluster_id")[prop_cols].mean()
 
-# 年齢ラベル（日本語）
+# Apple Human Interface Guidelines にインスパイアされたカラー
+apple_colors = {
+    0: '#FF9500', # 学生街 -> System Orange
+    1: '#34C759', # 子育て -> System Green
+    2: '#8E8E93', # 多世代 -> System Gray
+    3: '#007AFF', # 高齢化郊外 -> System Blue
+    4: '#FF3B30', # 準限界 -> System Red
+    5: '#A2845E'  # 限界 -> System Brown
+}
+
+CLUSTER_NAMES = {
+    0: "学生街エリア",
+    1: "近年人気が高まる子育てエリア",
+    2: "多世代が住まう都市型エリア",
+    3: "高齢化が見え始めた郊外エリア",
+    4: "準・限界住宅地エリア",
+    5: "限界住宅地エリア",
+}
+
+# 左目盛りのラベル作成（日本語用に短くスッキリと）
 if jp_font:
     display_labels = [l.replace("_", "〜") + "歳" if l != "95_over" else "95歳以上"
                       for l in AGE_LABELS]
 else:
     display_labels = [l.replace("_over", "+") for l in AGE_LABELS]
 
-fig, axes = plt.subplots(2, 3, figsize=(18, 14), sharex=True)
-axes = axes.flatten()
+plt.rcParams['figure.facecolor'] = '#FFFFFF'
+plt.rcParams['axes.facecolor'] = '#FFFFFF'
 
-colors = gradient_colors
+fig, axes = plt.subplots(2, 3, figsize=(19, 13))
+axes = axes.flatten()
 
 for i in range(N_CLUSTERS):
     ax = axes[i]
     if i in cluster_means.index:
         vals = cluster_means.loc[i].values * 100
-        y_pos = range(len(vals))
-        ax.barh(y_pos, vals, color=colors[i], edgecolor="white", alpha=0.85)
+        y_pos = np.arange(len(vals))
+        
+        # グラフの枠線を消す（Bottomのみ薄いグレー）
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_color('#E5E5EA')
+        ax.spines['bottom'].set_linewidth(1.5)
+        
+        # 目盛り線とラベルのスタイル
+        ax.tick_params(axis='y', length=0, pad=12, labelsize=11, colors='#1C1C1E')
+        ax.tick_params(axis='x', length=0, pad=10, labelsize=10, colors='#8E8E93')
+        
+        # 縦グリッド線
+        ax.grid(axis='x', color='#F2F2F7', linestyle='-', linewidth=1.5, alpha=1.0)
+        ax.set_axisbelow(True) # グリッドを背面へ
+        
+        # バーの描画（透過度をなくしてソリッドな色合いに）
+        bar_color = apple_colors.get(i, '#007AFF')
+        ax.barh(y_pos, vals, color=bar_color, edgecolor="none", height=0.75, alpha=1.0)
+        
         ax.set_yticks(y_pos)
-        ax.set_yticklabels(display_labels, fontsize=9)
+        ax.set_yticklabels(display_labels)
+        
+        # クラスター情報の取得
         n = summary_rows[i]["n_mesh"]
         ep = summary_rows[i]["elderly_pct"]
         cp = summary_rows[i]["child_pct"]
         ma = summary_rows[i]["mean_age"]
         mp = summary_rows[i]["mean_pop"]
-        t1 = summary_rows[i]["top1_age"]
-        ax.set_title(
-            f"Cluster {i}  (n={n:,}, 最頼{t1}, 平均{mp:.0f}人/メッシュ)\n"
-            f"子供{cp:.1f}% / 現役{summary_rows[i]['working_pct']:.1f}% / 高齢{ep:.1f}%",
-            fontsize=11, fontweight="bold", pad=8
-        )
-        ax.set_xlabel("人口割合 (%)" if jp_font else "Population share (%)", fontsize=10)
-        ax.grid(axis="x", linestyle="--", alpha=0.5)
+        cluster_name = CLUSTER_NAMES.get(i, f"Cluster {i}")
+        
+        # --- タイトル等の配置 ---
+        # 1. 識別名（大きく、太字で左揃え）
+        ax.text(0, 1.15, cluster_name, transform=ax.transAxes, 
+                fontsize=16, fontweight='bold', color='#1C1C1E', va='bottom', ha='left')
+        
+        # 2. 統計サマリー（メッシュ数・平均人口・平均年齢）- グレーでスマートに
+        subtitle = f"{n:,} メッシュ • 平均 {mp:.0f}人 / 区画 • 平均年齢 {ma:.1f}歳"
+        ax.text(0, 1.07, subtitle, transform=ax.transAxes, 
+                fontsize=11.5, color='#8E8E93', va='bottom', ha='left')
+        
+        # 3. 年齢構成比（よりオフィシャルな言葉に変更）
+        stats_text = f"年少人口 {cp:.1f}%   |   生産年齢人口 {summary_rows[i]['working_pct']:.1f}%   |   老年人口 {ep:.1f}%"
+        # 色は濃い文字色にして視認性アップ
+        ax.text(0, 1.00, stats_text, transform=ax.transAxes, 
+                fontsize=11, fontweight='bold', color='#3C3C43', va='bottom', ha='left')
+                
+        # 軸ラベル（x軸のみ）
+        ax.set_xlabel("人口割合 (%)", fontsize=11, color='#8E8E93', fontweight='bold', labelpad=10)
         ax.set_xlim(0, 28)
 
-
-for ax in axes[N_CLUSTERS:]:  # 余ったサブプロットを非表示
+for ax in axes[N_CLUSTERS:]:
     ax.set_visible(False)
-plt.tight_layout(rect=[0, 0, 1, 0.97])
-fig.suptitle(f"クラスター別 年齢構成（500mメッシュ・人口{MIN_POP}人以上）",
-             fontsize=14, fontweight="bold")
+
+# サブプロット間の余白調整（上部に全体のタイトルが入るスペースを開ける）
+plt.subplots_adjust(left=0.08, right=0.96, wspace=0.3, hspace=0.55, top=0.82)
+
+# 全体のタイトルを大見出し風に（AppleのSF Pro風に太く、美しい余白で）
+fig.text(0.08, 0.95, "500mメッシュ 年齢構成クラスター", 
+         fontsize=26, fontweight="bold", color="#1C1C1E")
+fig.text(0.08, 0.915, f"全国の人口{MIN_POP}人以上の区画を対象にした、6つの年齢層分布の傾向", 
+         fontsize=14, color="#8E8E93", fontweight="bold")
 
 out_png = DIR_PATH / "cluster_pyramids.png"
-plt.savefig(out_png, dpi=180, bbox_inches="tight")
+plt.savefig(out_png, dpi=250, bbox_inches="tight", facecolor='#FFFFFF', pad_inches=0.5)
 print(f"Saved: {out_png}")
 print("\nDone.")
