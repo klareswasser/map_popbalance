@@ -177,14 +177,17 @@
       #legend-close:active { background: rgba(118,118,128,0.2); }
 
       #legend-toggle {
-        display: flex; align-items: center;
+        display: flex; align-items: center; justify-content: center;
         position: absolute;
         top: max(12px, calc(env(safe-area-inset-top) + 2px));
         right: 14px; z-index: 20;
-        padding: 8px 14px; border: none;
-        font-size: 12.5px; font-weight: 600; color: #1C1C1E;
-        cursor: pointer; letter-spacing: -0.1px;
+        width: 38px; height: 38px;
+        border: none; padding: 0;
+        cursor: pointer;
+        border-radius: 11px;
+        color: rgba(60,60,67,0.7);
       }
+      #legend-toggle.active { color: #007AFF; }
       #geolocate-toggle {
         display: flex; align-items: center; justify-content: center;
         position: absolute;
@@ -234,9 +237,13 @@
   </div>
 </div>
 
-<button id="legend-toggle" class="panel">凡例</button>
+<button id="legend-toggle" class="panel" aria-label="凡例">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="19" height="19" fill="currentColor">
+    <path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/>
+  </svg>
+</button>
 <button id="geolocate-toggle" class="panel" aria-label="現在地">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="19" height="19" fill="currentColor">
     <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
   </svg>
 </button>
@@ -357,11 +364,11 @@ const legendClose = document.getElementById('legend-close');
 
 legendToggle.addEventListener('click', () => {
   const isOpen = legendEl.classList.toggle('open');
-  legendToggle.textContent = isOpen ? '✕ 閉じる' : '凡例';
+  legendToggle.classList.toggle('active', isOpen);
 });
 legendClose.addEventListener('click', () => {
   legendEl.classList.remove('open');
-  legendToggle.textContent = '凡例';
+  legendToggle.classList.remove('active');
 });
 
 const hiddenClusters = new Set();
