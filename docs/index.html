@@ -81,8 +81,15 @@
     }
     .legend-item {
       display: flex; align-items: center;
-      gap: 10px; padding: 4px 2px; border-radius: 6px;
+      gap: 10px; padding: 4px 6px; border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.18s, background 0.12s;
+      user-select: none;
     }
+    .legend-item:hover { background: rgba(0,0,0,0.04); }
+    .legend-item:active { background: rgba(0,0,0,0.08); }
+    .legend-item.off { opacity: 0.32; }
+    .legend-item.off .legend-dot { filter: grayscale(1); }
     .legend-dot {
       width: 10px; height: 10px; border-radius: 50%;
       flex-shrink: 0;
@@ -218,12 +225,12 @@
     <button id="legend-close" aria-label="閉じる">✕</button>
   </div>
   <div id="legend-body">
-    <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div><span class="legend-name">学生街エリア</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div><span class="legend-name">近年人気が高まる子育てエリア</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div><span class="legend-name">多世代が住まう都市型エリア</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#1565c0"></div><span class="legend-name">高齢化が見え始めた郊外エリア</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div><span class="legend-name">準・限界住宅地エリア</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#795548"></div><span class="legend-name">限界住宅地エリア</span></div>
+    <div class="legend-item" data-id="0"><div class="legend-dot" style="background:#ff9800"></div><span class="legend-name">学生街エリア</span></div>
+    <div class="legend-item" data-id="1"><div class="legend-dot" style="background:#4caf50"></div><span class="legend-name">近年人気が高まる子育てエリア</span></div>
+    <div class="legend-item" data-id="2"><div class="legend-dot" style="background:#bdbdbd"></div><span class="legend-name">多世代が住まう都市型エリア</span></div>
+    <div class="legend-item" data-id="3"><div class="legend-dot" style="background:#1565c0"></div><span class="legend-name">高齢化が見え始めた郊外エリア</span></div>
+    <div class="legend-item" data-id="4"><div class="legend-dot" style="background:#f44336"></div><span class="legend-name">準・限界住宅地エリア</span></div>
+    <div class="legend-item" data-id="5"><div class="legend-dot" style="background:#795548"></div><span class="legend-name">限界住宅地エリア</span></div>
   </div>
 </div>
 
@@ -355,6 +362,27 @@ legendToggle.addEventListener('click', () => {
 legendClose.addEventListener('click', () => {
   legendEl.classList.remove('open');
   legendToggle.textContent = '凡例';
+});
+
+const hiddenClusters = new Set();
+function updateClusterFilter() {
+  const visible = [0,1,2,3,4,5].filter(i => !hiddenClusters.has(i));
+  const filter = visible.length === 6 ? null : ['in', ['get', 'cluster_id'], ['literal', visible]];
+  map.setFilter('cluster-fill', filter);
+  map.setFilter('cluster-outline', filter);
+}
+document.querySelectorAll('.legend-item[data-id]').forEach(el => {
+  el.addEventListener('click', () => {
+    const id = Number(el.dataset.id);
+    if (hiddenClusters.has(id)) {
+      hiddenClusters.delete(id);
+      el.classList.remove('off');
+    } else {
+      hiddenClusters.add(id);
+      el.classList.add('off');
+    }
+    updateClusterFilter();
+  });
 });
 
 document.getElementById('geolocate-toggle').addEventListener('click', () => {
