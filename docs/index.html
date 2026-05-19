@@ -9,138 +9,162 @@
   <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'SF Pro JP',
+                   'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
     #map { width: 100vw; height: 100vh; }
 
-    /* ── タイトル ── */
+    /* ── iOS/macOS glass material ── */
+    .panel {
+      background: rgba(255,255,255,0.78);
+      backdrop-filter: blur(24px) saturate(180%) brightness(102%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(102%);
+      border: 0.5px solid rgba(255,255,255,0.6);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04);
+      border-radius: 16px;
+    }
+
+    /* ── Title ── */
     #title-box {
-      position: absolute;
-      top: 16px; left: 16px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 8px;
-      padding: 10px 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 10;
+      position: absolute; top: 16px; left: 16px;
+      padding: 12px 16px; z-index: 10;
       max-width: calc(100vw - 32px);
     }
-    #title-box h2 { font-size: 15px; color: #222; }
-    #title-box p  { font-size: 11px; color: #666; margin-top: 3px; }
+    #title-box h2 {
+      font-size: 15px; font-weight: 600; color: #1C1C1E;
+      letter-spacing: -0.3px; line-height: 1.2;
+    }
+    #title-box p {
+      font-size: 11.5px; color: rgba(60,60,67,0.55);
+      margin-top: 4px; letter-spacing: -0.1px;
+    }
 
-    /* ── 凡例 ── */
+    /* ── Search Panel ── */
+    #search-panel {
+      position: absolute; top: 16px; right: 16px;
+      padding: 14px; width: 280px; z-index: 20;
+    }
+    #search-panel h2 {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: rgba(60,60,67,0.45); margin-bottom: 10px;
+    }
+    /* iOS search field */
+    #search-row {
+      display: flex; align-items: center;
+      background: rgba(118,118,128,0.12);
+      border-radius: 10px; padding: 0 4px 0 10px; gap: 6px;
+    }
+    .search-icon {
+      flex-shrink: 0; display: flex; align-items: center;
+      color: rgba(60,60,67,0.35); pointer-events: none;
+    }
+    #address-input {
+      flex: 1; padding: 9px 4px; border: none; background: transparent;
+      color: #1C1C1E; font-size: 14px; font-family: inherit; outline: none;
+    }
+    #address-input::placeholder { color: rgba(60,60,67,0.35); }
+    #search-btn {
+      flex-shrink: 0; margin: 4px;
+      padding: 6px 13px; border-radius: 8px; border: none;
+      background: #007AFF; color: #fff;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; white-space: nowrap; letter-spacing: -0.1px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #search-btn:hover  { background: #0071E3; }
+    #search-btn:active { background: #005FBF; transform: scale(0.97); }
+    #search-btn:disabled { background: rgba(0,122,255,0.4); cursor: default; }
+    #result-box {
+      margin-top: 10px; padding: 10px 12px;
+      border-radius: 10px; font-size: 12px; display: none;
+    }
+    .result-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; letter-spacing: -0.2px; }
+    .result-detail { color: rgba(60,60,67,0.65); line-height: 1.7; }
+
+    /* ── Legend ── */
     #legend {
-      position: absolute;
-      bottom: 40px; left: 16px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 10;
-      overflow: hidden;
+      position: absolute; bottom: 40px; left: 16px;
+      z-index: 10; overflow: hidden; min-width: 220px;
     }
     #legend-toggle {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
-      cursor: pointer; user-select: none;
-      font-size: 13px; font-weight: 700; color: #333;
-      gap: 12px;
+      padding: 12px 14px 12px 16px; cursor: pointer; user-select: none; gap: 10px;
     }
-    #legend-toggle .arrow { transition: transform .2s; font-size: 10px; }
-    #legend.collapsed #legend-toggle .arrow { transform: rotate(-90deg); }
-    #legend-body { padding: 0 14px 10px; }
+    #legend-toggle > span:first-child {
+      font-size: 13px; font-weight: 600; color: #1C1C1E; letter-spacing: -0.2px;
+    }
+    #legend-chevron {
+      width: 20px; height: 20px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(60,60,67,0.35); font-size: 11px;
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    #legend.collapsed #legend-chevron { transform: rotate(-90deg); }
+    #legend-body {
+      padding: 6px 16px 14px;
+      border-top: 0.5px solid rgba(60,60,67,0.1);
+    }
     #legend.collapsed #legend-body { display: none; }
-    .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 12px; }
+    .legend-item {
+      display: flex; align-items: flex-start;
+      gap: 9px; padding: 5px 0;
+    }
     .legend-dot {
-      width: 13px; height: 13px; border-radius: 3px;
-      margin-right: 8px; flex-shrink: 0;
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 2px;
     }
+    .legend-label { display: flex; flex-direction: column; line-height: 1; }
+    .legend-name { font-size: 12px; font-weight: 500; color: #1C1C1E; }
+    .legend-age  { font-size: 10.5px; color: rgba(60,60,67,0.5); margin-top: 2px; }
 
-    /* ── 検索パネル ── */
-    #search-panel {
-      position: absolute;
-      top: 16px; right: 16px;
-      background: rgba(255,255,252,0.95);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: 10px;
-      padding: 12px 14px;
-      width: 270px;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-      z-index: 20;
-    }
-    #search-panel h2 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #444; }
-    #search-row { display: flex; gap: 6px; }
-    #address-input {
-      flex: 1; padding: 7px 10px; border-radius: 6px;
-      border: 1px solid rgba(0,0,0,0.18);
-      background: #fff; color: #1a1a1a;
-      font-size: 13px; outline: none;
-    }
-    #address-input:focus { border-color: #3b82f6; }
-    #search-btn {
-      padding: 7px 12px; border-radius: 6px; border: none;
-      background: #3b82f6; color: white; font-size: 13px;
-      cursor: pointer; font-weight: 600; white-space: nowrap;
-    }
-    #search-btn:hover { background: #2563eb; }
-    #result-box {
-      margin-top: 10px; padding: 10px 12px;
-      border-radius: 8px; font-size: 12px; display: none;
-    }
-    .result-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-    .result-detail { color: #555; line-height: 1.6; }
-
-    /* ── ホバー情報 ── */
+    /* ── Info (hover) ── */
     #info {
-      position: absolute;
-      bottom: 120px; right: 16px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 13px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 10;
-      max-width: 280px;
-      display: none;
+      position: absolute; bottom: 40px; right: 16px;
+      z-index: 10; max-width: 270px; display: none; padding: 14px 16px;
     }
-    #info h3 { font-size: 14px; margin-bottom: 6px; }
+    #info-title {
+      font-size: 14px; font-weight: 600; color: #1C1C1E;
+      margin-bottom: 6px; letter-spacing: -0.2px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .info-dot {
+      display: inline-block; width: 9px; height: 9px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    #info-body { font-size: 12px; color: rgba(60,60,67,0.65); line-height: 1.7; }
 
-    /* ── モバイル ── */
+    /* ── MapLibre control overrides ── */
+    .maplibregl-ctrl-group {
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      border: 0.5px solid rgba(255,255,255,0.55) !important;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04) !important;
+      background: rgba(255,255,255,0.78) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    }
+    .maplibregl-ctrl-group button { background-color: transparent !important; }
+
+    /* ── Mobile ── */
     @media (max-width: 640px) {
-      /* タイトル：左上に小さく */
-      #title-box {
-        top: 12px; left: 12px;
-        padding: 7px 10px;
-        max-width: calc(100vw - 24px);
-      }
+      #title-box { top: 12px; left: 12px; padding: 8px 12px; }
       #title-box h2 { font-size: 13px; }
       #title-box p  { display: none; }
 
-      /* 凡例：左下に折りたたみ済みで表示、幅は画面に収める */
-      #legend {
-        bottom: 80px; left: 12px;
-        max-width: calc(100vw - 24px);
-      }
-      #legend-toggle { font-size: 12px; padding: 8px 12px; }
-      .legend-item { font-size: 11px; }
+      #legend { bottom: 88px; left: 12px; max-width: calc(100vw - 24px); }
 
-      /* 検索パネル：底部シートに変更 */
       #search-panel {
-        top: auto; bottom: 0;
-        right: 0; left: 0;
-        width: 100%;
-        border-radius: 16px 16px 0 0;
-        padding: 12px 16px env(safe-area-inset-bottom, 12px);
-        box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+        top: auto; bottom: 0; right: 0; left: 0; width: 100%;
+        border-radius: 20px 20px 0 0; border-bottom: none;
+        padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
       }
       #search-panel h2 { display: none; }
-      #address-input { font-size: 16px; padding: 10px 12px; }
-      #search-btn    { font-size: 16px; padding: 10px 14px; }
+      #address-input { font-size: 16px; }
+      #search-btn { font-size: 15px; padding: 7px 14px; }
 
-      /* ホバー情報：タッチ時は検索パネル上に */
-      #info {
-        bottom: 80px;
-        right: 12px; left: 12px;
-        max-width: none;
-      }
+      #info { bottom: auto; top: 70px; right: 12px; left: 12px; max-width: none; }
     }
   </style>
 </head>
@@ -274,8 +298,7 @@ map.on('mousemove', 'cluster-fill', (e) => {
   const titleEl = document.getElementById('info-title');
   const bodyEl = document.getElementById('info-body');
   infoEl.style.display = 'block';
-  titleEl.style.color = CLUSTER_COLORS[cid] || '#333';
-  titleEl.textContent = `Cluster ${cid}: ${clusterNames[cid] || ''}`;
+  titleEl.innerHTML = `<span class="info-dot" style="background:${CLUSTER_COLORS[cid] || '#aaa'}"></span>${clusterNames[cid] || 'Cluster ' + cid}`;
   let html = `人口: ${Number(props.pop_total).toLocaleString()} 人`;
   if (props.gini != null) html += `<br>ジニ係数(0-64歳): ${Number(props.gini).toFixed(3)}`;
   bodyEl.innerHTML = html;
@@ -344,8 +367,8 @@ async function searchAddress() {
 function showResult(color, name, detail) {
   const box = document.getElementById('result-box');
   box.style.display = 'block';
-  box.style.background = color ? `${color}18` : 'rgba(0,0,0,0.05)';
-  box.style.border = `1px solid ${color || '#ccc'}`;
+  box.style.background = color ? `${color}12` : 'rgba(118,118,128,0.06)';
+  box.style.border = `0.5px solid ${color ? color + '55' : 'rgba(60,60,67,0.12)'}`;
   box.innerHTML = `<div class="result-name" style="color:${color || '#333'}">${name}</div>`
     + (detail ? `<div class="result-detail">${detail}</div>` : '');
 }
