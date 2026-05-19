@@ -54,58 +54,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* Search panel */
-    #search-panel {
-      position: absolute; top: 14px; right: 14px;
-      padding: 12px; width: 288px; z-index: 20;
-    }
-    #search-panel h2 {
-      font-size: 10.5px; font-weight: 600;
-      letter-spacing: 0.5px; color: rgba(60,60,67,0.45);
-      margin-bottom: 8px; padding-left: 2px; text-transform: uppercase;
-    }
-    #search-row {
-      display: flex; align-items: center;
-      background: rgba(118,118,128,0.10);
-      border-radius: 9px; padding: 0 4px 0 10px; gap: 6px;
-      transition: background 0.18s, box-shadow 0.18s;
-    }
-    #search-row:focus-within {
-      background: rgba(255,255,255,0.95);
-      box-shadow: 0 0 0 3.5px rgba(0,122,255,0.22);
-    }
-    .search-icon {
-      flex-shrink: 0; display: flex; align-items: center;
-      color: rgba(60,60,67,0.45); pointer-events: none;
-    }
-    #address-input {
-      flex: 1; padding: 9px 4px; border: none; background: transparent;
-      color: #1C1C1E; font-size: 13.5px; font-family: inherit; outline: none;
-      letter-spacing: -0.1px;
-    }
-    #address-input::placeholder { color: rgba(60,60,67,0.38); }
-    #search-btn {
-      flex-shrink: 0; margin: 3px;
-      padding: 6px 14px; border-radius: 7px; border: none;
-      background: #007AFF; color: #fff;
-      font-size: 12.5px; font-weight: 600; font-family: inherit;
-      cursor: pointer; white-space: nowrap; letter-spacing: -0.1px;
-      transition: background 0.15s, transform 0.1s;
-    }
-    #search-btn:hover  { background: #0071E3; }
-    #search-btn:active { background: #005FBF; transform: scale(0.95); }
-    #search-btn:disabled { background: rgba(0,122,255,0.35); cursor: default; }
-    #result-box {
-      margin-top: 12px; padding: 11px 13px;
-      border-radius: 10px; font-size: 12px; display: none;
-      animation: panelIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    .result-name {
-      font-size: 13px; font-weight: 600; margin-bottom: 4px;
-      letter-spacing: -0.2px; display: flex; align-items: center; gap: 7px;
-    }
-    .result-detail { color: rgba(60,60,67,0.7); line-height: 1.65; }
-
     /* Legend */
     #legend {
       position: absolute; bottom: 24px; left: 14px;
@@ -211,25 +159,6 @@
         display: none !important;
       }
 
-      #search-panel {
-        top: auto; bottom: 0; right: 0; left: 0; width: 100%;
-        border-radius: 22px 22px 0 0;
-        padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
-        box-shadow:
-          0 -1px 0 rgba(255,255,255,0.5) inset,
-          0 -8px 24px rgba(0,0,0,0.10);
-      }
-      #search-panel::before {
-        content: ''; display: block;
-        width: 36px; height: 5px; border-radius: 3px;
-        background: rgba(60,60,67,0.2);
-        margin: 0 auto 10px;
-      }
-      #search-panel h2 { display: none; }
-      #address-input { font-size: 16px; padding: 11px 4px; }
-      #search-btn { font-size: 15px; padding: 8px 14px; }
-      #result-box { max-height: 110px; overflow-y: auto; }
-
       #legend {
         display: none;
         top: max(56px, calc(env(safe-area-inset-top) + 46px));
@@ -280,20 +209,6 @@
 <div id="header">
   <h1>年齢分布クラスターマップ</h1>
   <p>令和2年(2020) ・ 500mメッシュ ・ 全国</p>
-</div>
-
-<div id="search-panel" class="panel">
-  <h2>住所・地名で検索</h2>
-  <div id="search-row">
-    <span class="search-icon">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-      </svg>
-    </span>
-    <input id="address-input" type="text" placeholder="例：渋谷区、札幌市北区" />
-    <button id="search-btn">検索</button>
-  </div>
-  <div id="result-box"></div>
 </div>
 
 <div id="legend" class="panel">
@@ -423,71 +338,6 @@ map.on('mouseleave', 'cluster-fill', () => {
 map.on('click', 'cluster-fill', (e) => {
   pinned = true;
   popup.setLngLat(e.lngLat).setHTML(makePopupHTML(e.features[0].properties)).addTo(map);
-});
-
-let searchMarker = null;
-
-async function searchAddress() {
-  const q = document.getElementById('address-input').value.trim();
-  if (!q) return;
-  const btn = document.getElementById('search-btn');
-  btn.textContent = '…';
-  btn.disabled = true;
-
-  try {
-    const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!data.length) { showResult(null, null, '住所が見つかりませんでした'); return; }
-
-    const [lon, lat] = data[0].geometry.coordinates;
-    const displayName = data[0].properties.title;
-
-    if (searchMarker) searchMarker.remove();
-    searchMarker = new maplibregl.Marker({ color: '#007AFF' })
-      .setLngLat([lon, lat]).addTo(map);
-
-    map.flyTo({ center: [lon, lat], zoom: 12, duration: 800 });
-
-    map.once('moveend', () => {
-      map.once('idle', () => {
-        const pt = map.project([lon, lat]);
-        const features = map.queryRenderedFeatures(pt, { layers: ['cluster-fill'] });
-        if (features.length) {
-          const props = features[0].properties;
-          const cid = props.cluster_id;
-          const color = CLUSTER_COLORS[cid] || '#333';
-          const name = CLUSTER_NAMES[cid] || `Cluster ${cid}`;
-          const detail = `人口 <b style="color:#1C1C1E;margin-left:4px">${Number(props.pop_total || 0).toLocaleString()}</b> 人`;
-          showResult(color, name, detail);
-          if (searchMarker) searchMarker.remove();
-          searchMarker = new maplibregl.Marker({ color }).setLngLat([lon, lat]).addTo(map);
-        } else {
-          showResult(null, displayName.split(',')[0], 'この地点のメッシュデータがありません');
-        }
-      });
-    });
-  } catch (e) {
-    showResult(null, 'エラー', '検索に失敗しました');
-  } finally {
-    btn.textContent = '検索';
-    btn.disabled = false;
-  }
-}
-
-function showResult(color, name, detail) {
-  const box = document.getElementById('result-box');
-  box.style.display = 'block';
-  box.style.background = color ? `${color}12` : 'rgba(118,118,128,0.06)';
-  box.style.border = `0.5px solid ${color ? color + '55' : 'rgba(60,60,67,0.12)'}`;
-  const dot = color ? `<span class="info-dot" style="background:${color}"></span>` : '';
-  box.innerHTML = (name ? `<div class="result-name">${dot}<span style="color:${color || '#1C1C1E'}">${name}</span></div>` : '')
-    + (detail ? `<div class="result-detail">${detail}</div>` : '');
-}
-
-document.getElementById('search-btn').addEventListener('click', searchAddress);
-document.getElementById('address-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') searchAddress();
 });
 
 const legendEl = document.getElementById('legend');
