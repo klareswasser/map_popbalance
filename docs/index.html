@@ -271,7 +271,7 @@ const geolocate = new maplibregl.GeolocateControl({
   showUserLocation: true,
   fitBoundsOptions: { maxZoom: 12 },
 });
-map.addControl(geolocate, 'top-left');
+map.addControl(geolocate, 'top-right');
 
 map.on('load', () => {
   document.getElementById('loading').classList.add('hidden');
