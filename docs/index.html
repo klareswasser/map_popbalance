@@ -12,29 +12,51 @@
     body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; }
     #map { width: 100vw; height: 100vh; }
 
-    #legend {
+    /* ── タイトル ── */
+    #title-box {
       position: absolute;
-      bottom: 40px;
-      left: 16px;
+      top: 16px; left: 16px;
       background: rgba(255,255,255,0.92);
       border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 13px;
+      padding: 10px 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 10;
-      min-width: 190px;
+      max-width: calc(100vw - 32px);
     }
-    #legend h3 { font-size: 14px; margin-bottom: 8px; color: #333; }
-    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    #title-box h2 { font-size: 15px; color: #222; }
+    #title-box p  { font-size: 11px; color: #666; margin-top: 3px; }
+
+    /* ── 凡例 ── */
+    #legend {
+      position: absolute;
+      bottom: 40px; left: 16px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+      overflow: hidden;
+    }
+    #legend-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      cursor: pointer; user-select: none;
+      font-size: 13px; font-weight: 700; color: #333;
+      gap: 12px;
+    }
+    #legend-toggle .arrow { transition: transform .2s; font-size: 10px; }
+    #legend.collapsed #legend-toggle .arrow { transform: rotate(-90deg); }
+    #legend-body { padding: 0 14px 10px; }
+    #legend.collapsed #legend-body { display: none; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 12px; }
     .legend-dot {
-      width: 14px; height: 14px; border-radius: 3px;
+      width: 13px; height: 13px; border-radius: 3px;
       margin-right: 8px; flex-shrink: 0;
     }
 
+    /* ── 検索パネル ── */
     #search-panel {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 16px; right: 16px;
       background: rgba(255,255,252,0.95);
       border: 1px solid rgba(0,0,0,0.1);
       border-radius: 10px;
@@ -66,10 +88,10 @@
     .result-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
     .result-detail { color: #555; line-height: 1.6; }
 
+    /* ── ホバー情報 ── */
     #info {
       position: absolute;
-      bottom: 120px;
-      right: 16px;
+      bottom: 120px; right: 16px;
       background: rgba(255,255,255,0.92);
       border-radius: 8px;
       padding: 12px 16px;
@@ -81,33 +103,54 @@
     }
     #info h3 { font-size: 14px; margin-bottom: 6px; }
 
-    @media (max-width: 600px) {
-      #search-panel {
-        top: auto; bottom: 0; right: 0; left: 0;
-        width: 100%; border-radius: 14px 14px 0 0;
-        padding: 12px 16px 20px;
+    /* ── モバイル ── */
+    @media (max-width: 640px) {
+      /* タイトル：左上に小さく */
+      #title-box {
+        top: 12px; left: 12px;
+        padding: 7px 10px;
+        max-width: calc(100vw - 24px);
       }
-      #address-input { font-size: 16px; }
-      #search-btn { font-size: 16px; }
-    }
+      #title-box h2 { font-size: 13px; }
+      #title-box p  { display: none; }
 
-    #title-box {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 13px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 10;
+      /* 凡例：左下に折りたたみ済みで表示、幅は画面に収める */
+      #legend {
+        bottom: 80px; left: 12px;
+        max-width: calc(100vw - 24px);
+      }
+      #legend-toggle { font-size: 12px; padding: 8px 12px; }
+      .legend-item { font-size: 11px; }
+
+      /* 検索パネル：底部シートに変更 */
+      #search-panel {
+        top: auto; bottom: 0;
+        right: 0; left: 0;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        padding: 12px 16px env(safe-area-inset-bottom, 12px);
+        box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+      }
+      #search-panel h2 { display: none; }
+      #address-input { font-size: 16px; padding: 10px 12px; }
+      #search-btn    { font-size: 16px; padding: 10px 14px; }
+
+      /* ホバー情報：タッチ時は検索パネル上に */
+      #info {
+        bottom: 80px;
+        right: 12px; left: 12px;
+        max-width: none;
+      }
     }
-    #title-box h2 { font-size: 15px; color: #222; }
-    #title-box p { font-size: 11px; color: #666; margin-top: 3px; }
   </style>
 </head>
 <body>
 <div id="map"></div>
+
+<div id="title-box">
+  <h2>国勢調査 年齢分布クラスターマップ</h2>
+  <p>令和2年(2020) ・ 500mメッシュ ・ 全国</p>
+</div>
 
 <div id="search-panel">
   <h2>住所・地名で検索</h2>
@@ -123,19 +166,19 @@
   <div id="info-body"></div>
 </div>
 
-<div id="title-box">
-  <h2>国勢調査 年齢分布クラスターマップ</h2>
-  <p>令和2年(2020) ・ 500mメッシュ ・ 全国</p>
-</div>
-
 <div id="legend">
-  <h3>クラスター凡例</h3>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>0: 学生街エリア <small>(20〜24歳)</small></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>1: 近年人気が高まる子育てエリア <small>(40〜44歳, 45〜49歳)</small></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div>2: 多世代が住まう都市型エリア <small>(45〜49歳, 30〜34歳, 35〜39歳)</small></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#1565c0"></div>3: 高齢化が見え始めた郊外エリア <small>(45〜49歳, 70〜74歳)</small></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div>4: 準・限界住宅地エリア <small>(70〜74歳, 65〜69歳)</small></div>
-  <div class="legend-item"><div class="legend-dot" style="background:#795548"></div>5: 限界住宅地エリア <small>(85〜89歳, 90〜94歳)</small></div>
+  <div id="legend-toggle">
+    <span>クラスター凡例</span>
+    <span class="arrow">▼</span>
+  </div>
+  <div id="legend-body">
+    <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>0: 学生街エリア <small>(20〜24歳)</small></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>1: 近年人気が高まる子育てエリア <small>(40〜44歳, 45〜49歳)</small></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#bdbdbd"></div>2: 多世代が住まう都市型エリア <small>(45〜49歳, 30〜34歳)</small></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1565c0"></div>3: 高齢化が見え始めた郊外エリア <small>(45〜49歳, 70〜74歳)</small></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div>4: 準・限界住宅地エリア <small>(70〜74歳, 65〜69歳)</small></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#795548"></div>5: 限界住宅地エリア <small>(85〜89歳, 90〜94歳)</small></div>
+  </div>
 </div>
 
 <script>
@@ -310,6 +353,19 @@ function showResult(color, name, detail) {
 document.getElementById('search-btn').addEventListener('click', searchAddress);
 document.getElementById('address-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') searchAddress();
+});
+
+// ── 凡例の折りたたみ ──
+const legendEl = document.getElementById('legend');
+const legendToggle = document.getElementById('legend-toggle');
+
+// モバイルでは最初から閉じた状態
+if (window.innerWidth <= 640) {
+  legendEl.classList.add('collapsed');
+}
+
+legendToggle.addEventListener('click', () => {
+  legendEl.classList.toggle('collapsed');
 });
 </script>
 </body>
