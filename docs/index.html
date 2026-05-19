@@ -360,7 +360,7 @@ function makePopupHTML(props) {
   const color = CLUSTER_COLORS[cid] || '#888';
   const name = CLUSTER_NAMES[cid] || `Cluster ${cid}`;
   const pop = props.pop_total != null ? Number(props.pop_total).toLocaleString() : '—';
-  return `<div style="font-size:13px;line-height:1.5;min-width:180px;font-family:inherit;letter-spacing:-0.15px;margin-top:2px;">
+  return `<div style="font-size:13px;line-height:1.5;min-width:234px;font-family:inherit;letter-spacing:-0.15px;margin-top:2px;">
     <div style="font-weight:600;color:${color};margin-bottom:10px;font-size:15px;letter-spacing:-0.4px;">
       ${name}
     </div>
