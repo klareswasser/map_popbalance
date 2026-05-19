@@ -351,42 +351,48 @@ map.on('load', () => {
     'source-layer': 'cluster',
     minzoom: 9,
     paint: {
-      'line-color': [
-        'case',
-        ['boolean', ['feature-state', 'selected'], false], '#1C1C1E',
-        '#fff'
-      ],
-      'line-width': [
-        'case',
-        ['boolean', ['feature-state', 'selected'], false], 2.5,
-        0.3
-      ],
-      'line-opacity': [
-        'case',
-        ['boolean', ['feature-state', 'selected'], false], 1.0,
-        0.4
-      ]
+      'line-color': '#fff',
+      'line-width': 0.3,
+      'line-opacity': 0.4,
+    },
+  });
+
+  // 選択中セルの黒枠用 GeoJSON ソース
+  map.addSource('highlight', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+  map.addLayer({
+    id: 'cluster-highlight',
+    type: 'line',
+    source: 'highlight',
+    paint: {
+      'line-color': '#1C1C1E',
+      'line-width': 2.5,
     },
   });
 });
 
-const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 8 });
+const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, anchor: 'bottom', offset: 12 });
 let pinned = false;
-let selectedFeatureId = null;
 
-function updateHighlight(id) {
-  if (selectedFeatureId !== null && selectedFeatureId !== id) {
-    map.setFeatureState({ source: 'cluster', sourceLayer: 'cluster', id: selectedFeatureId }, { selected: false });
+function clearHighlight() {
+  if (map.getSource('highlight')) {
+    map.getSource('highlight').setData({ type: 'FeatureCollection', features: [] });
   }
-  if (id !== null && id !== selectedFeatureId) {
-    map.setFeatureState({ source: 'cluster', sourceLayer: 'cluster', id: id }, { selected: true });
+}
+function setHighlight(geometry) {
+  if (map.getSource('highlight')) {
+    map.getSource('highlight').setData({
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry, properties: {} }],
+    });
   }
-  selectedFeatureId = id;
 }
 
-popup.on('close', () => { 
-  pinned = false; 
-  updateHighlight(null);
+popup.on('close', () => {
+  pinned = false;
+  clearHighlight();
 });
 
 function makePopupHTML(props) {
@@ -411,28 +417,27 @@ map.on('click', (e) => {
   }
 });
 
-map.on('mousemove', 'cluster-fill', (e) => {
+map.on('mousemove', 'cluster-fill', () => {
   map.getCanvas().style.cursor = 'pointer';
-  if (!pinned && e.features.length > 0) {
-    const feature = e.features[0];
-    updateHighlight(feature.id);
-    popup.setLngLat(e.lngLat).setHTML(makePopupHTML(feature.properties)).addTo(map);
-  }
 });
 map.on('mouseleave', 'cluster-fill', () => {
   map.getCanvas().style.cursor = '';
-  if (!pinned) {
-    popup.remove();
-    updateHighlight(null);
-  }
 });
 
 map.on('click', 'cluster-fill', (e) => {
   if (e.features.length > 0) {
     pinned = true;
     const feature = e.features[0];
-    updateHighlight(feature.id);
-    popup.setLngLat(e.lngLat).setHTML(makePopupHTML(feature.properties)).addTo(map);
+    setHighlight(feature.geometry);
+    // ポップアップをメッシュ上端中央に表示
+    const coords = feature.geometry.coordinates[0];
+    const lats = coords.map(c => c[1]);
+    const lons = coords.map(c => c[0]);
+    const topLat = Math.max(...lats);
+    const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2;
+    popup.setLngLat([centerLon, topLat])
+         .setHTML(makePopupHTML(feature.properties))
+         .addTo(map);
   }
 });
 
