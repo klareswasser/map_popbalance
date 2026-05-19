@@ -350,13 +350,44 @@ map.on('load', () => {
     source: 'cluster',
     'source-layer': 'cluster',
     minzoom: 9,
-    paint: { 'line-color': '#fff', 'line-width': 0.3, 'line-opacity': 0.4 },
+    paint: {
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], '#1C1C1E',
+        '#fff'
+      ],
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], 2.5,
+        0.3
+      ],
+      'line-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], 1.0,
+        0.4
+      ]
+    },
   });
 });
 
 const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 8 });
 let pinned = false;
-popup.on('close', () => { pinned = false; });
+let selectedFeatureId = null;
+
+function updateHighlight(id) {
+  if (selectedFeatureId !== null && selectedFeatureId !== id) {
+    map.setFeatureState({ source: 'cluster', sourceLayer: 'cluster', id: selectedFeatureId }, { selected: false });
+  }
+  if (id !== null && id !== selectedFeatureId) {
+    map.setFeatureState({ source: 'cluster', sourceLayer: 'cluster', id: id }, { selected: true });
+  }
+  selectedFeatureId = id;
+}
+
+popup.on('close', () => { 
+  pinned = false; 
+  updateHighlight(null);
+});
 
 function makePopupHTML(props) {
   const cid = props.cluster_id;
@@ -382,16 +413,27 @@ map.on('click', (e) => {
 
 map.on('mousemove', 'cluster-fill', (e) => {
   map.getCanvas().style.cursor = 'pointer';
-  if (!pinned) popup.setLngLat(e.lngLat).setHTML(makePopupHTML(e.features[0].properties)).addTo(map);
+  if (!pinned && e.features.length > 0) {
+    const feature = e.features[0];
+    updateHighlight(feature.id);
+    popup.setLngLat(e.lngLat).setHTML(makePopupHTML(feature.properties)).addTo(map);
+  }
 });
 map.on('mouseleave', 'cluster-fill', () => {
   map.getCanvas().style.cursor = '';
-  if (!pinned) popup.remove();
+  if (!pinned) {
+    popup.remove();
+    updateHighlight(null);
+  }
 });
 
 map.on('click', 'cluster-fill', (e) => {
-  pinned = true;
-  popup.setLngLat(e.lngLat).setHTML(makePopupHTML(e.features[0].properties)).addTo(map);
+  if (e.features.length > 0) {
+    pinned = true;
+    const feature = e.features[0];
+    updateHighlight(feature.id);
+    popup.setLngLat(e.lngLat).setHTML(makePopupHTML(feature.properties)).addTo(map);
+  }
 });
 
 const legendEl = document.getElementById('legend');
