@@ -285,7 +285,7 @@
 const protocol = new pmtiles.Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 
-const PMTILES_URL = 'pmtiles://' + new URL('cluster.pmtiles', window.location.href).href;
+const PMTILES_URL = 'pmtiles://' + new URL(`cluster.pmtiles?v=${Date.now()}`, window.location.href).href;
 
 const CLUSTER_COLORS = ['#ff9800','#4caf50','#bdbdbd','#1565c0','#f44336','#795548'];
 const CLUSTER_NAMES = {
